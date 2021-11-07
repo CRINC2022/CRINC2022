@@ -43,7 +43,7 @@ class Manager_AM(object):
               '  relabel:', self._args.relabel,
               '  weight:', self._args.weight,
               '   alpha:', self._args.alpha,
-              '   thr:', self._args.thr,)
+              '   tau:', self._args.tau,)
 
         pretrained = True
         if args.net == 'resnet18':
@@ -133,7 +133,7 @@ class Manager_AM(object):
         # smooth = max(0, (1 - self._args.alpha) / length * (length - (epoch - self._warmup)))
         smooth = 0
         threshold_clean = self._js[self._js >= 0].mean() + (self._args.alpha + smooth) * self._js[self._js >= 0].std()
-        threshold_relabel = self._args.thr
+        threshold_relabel = self._args.tau
 
         _, pred = torch.max(prob, 1)
         js_pred = js_div(prob, self._ols.matrix.detach()[pred])
@@ -165,7 +165,7 @@ class Manager_AM(object):
         print('Training ... ')
         best_accuracy = 0.0
         best_epoch = None
-        print('Epoch\tTrain Loss\tTrain Acc\tTest Acc\tEpoch Runtime\tTrain Samples\tRelabel Samples')
+        print('Epoch\tTrain Loss\tTrain Acc\tTest Acc\tEpoch Runtime')
         for t in range(self._args.epochs):
             if self._warmup > t:
                 self._warmupscheduler.step()
@@ -175,8 +175,6 @@ class Manager_AM(object):
             epoch_loss = []
             num_correct = 0
             num_total = 0
-            num_train = 0
-            num_relabel = 0
             batch_relabel = 0
             for X, y, id, path in self._train_loader:
                 # Enable training mode
@@ -206,9 +204,7 @@ class Manager_AM(object):
 
                 epoch_loss.append(loss.item())
 
-                # prediction is the index location of the maximum value found,
-                num_train += batch_train
-                num_relabel += batch_relabel
+
                 # Clear the existing gradients
                 self._optimizer.zero_grad()
                 # Backward
@@ -232,9 +228,9 @@ class Manager_AM(object):
                 print('*', end='')
                 # Save mode
                 torch.save(self._net.state_dict(), os.path.join(self._path, self._args.net + 'best.pth'))
-            print('%d\t%4.3f\t\t%4.2f%%\t\t%4.2f%%\t\t%4.2f\t\t%4.2f\t\t%4.2f' % (t + 1, sum(epoch_loss) / len(epoch_loss),
+            print('%d\t%4.3f\t\t%4.2f%%\t\t%4.2f%%\t\t%4.2f' % (t + 1, sum(epoch_loss) / len(epoch_loss),
                                                             train_accuracy, test_accuracy,
-                                                            epoch_end - epoch_start, num_train, num_relabel))
+                                                            epoch_end - epoch_start ))
 
         torch.save({'ols': self._ols.matrix.cpu().data}, 'ols.pth')
         print('-----------------------------------------------------------------')
@@ -312,7 +308,7 @@ if __name__ == '__main__':
     parser.add_argument('--relabel', action='store_true', default=False)
     parser.add_argument('--alpha', dest='alpha',  type=float, default=0.5)
     parser.add_argument('--weight', dest='weight', type=float, default=0.5)
-    parser.add_argument('--thr', dest='thr', type=float, default=0.05)
+    parser.add_argument('--tau', dest='tau', type=float, default=0.04)
     parser.add_argument('--momentum', dest='momentum', type=float, default=0.5)
 
     args = parser.parse_args()
