@@ -17,7 +17,7 @@ How to use
 ------------
 The code is currently tested only on GPU
 * **Data Preparation**
-    - We test our approach on [WebFG-496][1]. Download data into project root directory and uncompress them using
+    - Download data into project root directory and uncompress them using
         ```
         wget https://web-fgvc-496-5089-sh.oss-cn-shanghai.aliyuncs.com/web-bird.tar.gz
         tar -xvf web-bird.tar.gz
