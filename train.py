@@ -23,7 +23,7 @@ torch.cuda.empty_cache()
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-class Manager_AM(object):
+class Manager(object):
     def __init__(self, args):
         """
         Prepare the network, criterion, Optimizer and data
@@ -45,11 +45,10 @@ class Manager_AM(object):
               '   alpha:', self._args.alpha,
               '   tau:', self._args.tau,)
 
-        pretrained = True
         if args.net == 'resnet18':
-            net = ResNet18(n_classes=args.n_classes, pretrained=pretrained)
+            net = ResNet18(n_classes=args.n_classes, pretrained=True)
         elif args.net == 'resnet50':
-            net = ResNet50(n_classes=args.n_classes, pretrained=pretrained)
+            net = ResNet50(n_classes=args.n_classes, pretrained=True)
         else:
             raise AssertionError('Not implemented yet')
 
@@ -109,8 +108,8 @@ class Manager_AM(object):
         if epoch < self._warmup - 1:
             return losses.mean(), losses.size(0)
 
-        # smooth = max(0, (1 - self._args.alpha) / length * (length - (epoch - self._warmup)))
-        smooth = 0
+        # smooth = max(0, (1 - self._args.alpha) / length * (length - (epoch - self._warmup))) # for aircraft and car
+        smooth = 0  # for bird
         threshold_clean = self._js[self._js >= 0].mean() + (self._args.alpha + smooth) * self._js[self._js >= 0].std()
 
         losses = losses[js_batch <= threshold_clean + torch.isnan(js_batch)]
@@ -130,8 +129,8 @@ class Manager_AM(object):
             losses = (1 - self._args.weight) * F.cross_entropy(logits, y, reduction='none') + self._args.weight * self._ols(logits, y, reduction='none')
             return losses.mean(), losses.size(0)
 
-        # smooth = max(0, (1 - self._args.alpha) / length * (length - (epoch - self._warmup)))
-        smooth = 0
+        # smooth = max(0, (1 - self._args.alpha) / length * (length - (epoch - self._warmup)))  # for aircraft and car
+        smooth = 0  # for bird
         threshold_clean = self._js[self._js >= 0].mean() + (self._args.alpha + smooth) * self._js[self._js >= 0].std()
         threshold_relabel = self._args.tau
 
@@ -321,5 +320,5 @@ if __name__ == '__main__':
         print('>>>>>> Creating directory \'model\' ... ')
         os.mkdir(os.path.join(os.popen('pwd').read().strip(), model))
 
-    manager = Manager_AM(args)
+    manager = Manager(args)
     manager.train_fg()
